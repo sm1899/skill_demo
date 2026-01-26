@@ -119,7 +119,20 @@ def generate_coachable_curriculum(topic: str, video_data: List[dict]):
         # Log a snippet of the raw output for debugging
         print(f"[Terminal Log] Synthesis Raw Output Header: {str(raw_output.content)[:200]}...")
         
-        return parser.parse(raw_output.content)
+        # Helper to normalize Gemini 3.0 list output
+        content_to_parse = raw_output.content
+        if isinstance(content_to_parse, list):
+             # Extract text from [{'type': 'text', 'text': '...'}]
+             print("[Terminal Log] Detected List-Type Content. Normalizing...")
+             parts = []
+             for part in content_to_parse:
+                 if isinstance(part, dict) and 'text' in part:
+                     parts.append(part['text'])
+                 elif isinstance(part, str):
+                     parts.append(part)
+             content_to_parse = "".join(parts)
+        
+        return parser.parse(content_to_parse)
     except Exception as e:
         print(f"[Terminal Log] Synthesis Error: {str(e)}")
         raise e

@@ -10,6 +10,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class AICoach:
+    def _normalize_content(self, response_content) -> str:
+        """Helper to handle new Gemini model output formats (list vs string)."""
+        if isinstance(response_content, str):
+            return response_content
+        if isinstance(response_content, list):
+            parts = []
+            for part in response_content:
+                if isinstance(part, dict) and 'text' in part:
+                    parts.append(part['text'])
+                elif isinstance(part, str):
+                    parts.append(part)
+            return "".join(parts)
+        return str(response_content)
+
     def __init__(self, topic: str, curriculum: CoachableCurriculum, video_data: List[dict]):
         self.topic = topic
         self.curriculum = curriculum
@@ -94,7 +108,7 @@ class AICoach:
         
         messages = [HumanMessage(content=grounding_prompt)]
         response = self.llm.invoke(messages)
-        content = response.content
+        content = self._normalize_content(response.content)
         print(f"[Terminal Log] 🔵 Stage 2 OUTPUT:\n{content}\n---")
         return content
 
@@ -113,7 +127,7 @@ class AICoach:
         
         messages = [SystemMessage(content=self.system_prompt + context_prompt)] + self.chat_history
         draft_response = self.llm.invoke(messages)
-        draft_content = draft_response.content
+        draft_content = self._normalize_content(draft_response.content)
         print(f"[Terminal Log] 📜 Draft Length: {len(draft_content)} chars")
         
         # Step 2: Citation Agent (Grounding)
@@ -129,7 +143,7 @@ class AICoach:
         )
         # Using HumanMessage to prevent empty content error
         sources_response = self.llm.invoke([HumanMessage(content=sources_prompt)])
-        sources = sources_response.content
+        sources = self._normalize_content(sources_response.content)
         
         self.chat_history.append(AIMessage(content=draft_content))
         
