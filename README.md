@@ -30,75 +30,40 @@ When the user asks a question, a **Multi-Agent System** generates the response:
 
 ```mermaid
 graph TD
-    subgraph Dataflow
-        User[User Input / Chat] -->|Question| AICoach
-        
-        AICoach[AI COACH<br/>Orchestrator] <--> KnowledgeBase[(Knowledge Base<br/>Cleaned Transcripts)]
-        
-        AICoach -->|1. Draft Logic| ResponseAgent[RESPONSE AGENT<br/>The Instructor]
-        
-        ResponseAgent -->|2. Draft Text| CitationAgent[CITATION AGENT<br/>The Librarian]
-        
-        CitationAgent -->|3. Grounded Text with V#| Linkifier[UI LINKIFIER<br/>Visual Layer]
-        
-        Linkifier -->|4. Final Output with Links| Display[User Interface]
-        
-        Display -->|Feedback Loop| User
-    end
-    
-    subgraph Context
-        History(Chat History) -.-> AICoach
-        History -.-> ResponseAgent
-    end
-    
-    style User fill:#f9f,stroke:#333
-    style AICoach fill:#bbf,stroke:#333
-    style CitationAgent fill:#bfb,stroke:#333
-```
+    %% Nodes
+    User([👤 User])
+    UI([💻 UI Interface])
+    Coach([🤖 AI Coach<br/>Orchestrator])
+    KB[(📚 Knowledge Base<br/>Transcripts)]
+    DraftAgent[📝 Response Agent<br/>'The Instructor']
+    CiteAgent[🔍 Citation Agent<br/>'The Librarian']
+    Linker[🔗 Linkifier<br/>'The Formatter']
+    History[(Chat History)]
 
-<details>
-<summary><b>Click here for a text-only architecture diagram</b> (If the graph above doesn't render)</summary>
+    %% Flow
+    User -->|Question| UI
+    UI -->|Input| Coach
+    
+    Coach <-->|Context Retrieval| KB
+    Coach <-->|Memory| History
+    
+    Coach -->|1. Request Content| DraftAgent
+    DraftAgent -->|2. Draft Answer| CiteAgent
+    CiteAgent -.->|Verify Claims| KB
+    CiteAgent -->|3. Cited Text [V#]| Linker
+    
+    Linker -->|4. Final Text [1]| UI
+    UI -->|Response| User
 
-```text
-      User Input (Chat)
-           │
-           ▼
-    +-------------------+      +-------------------------+
-    |     AI COACH      | <--> |     Knowledge Base      |
-    |   (Orchestrator)  |      | (Cleaned Transcripts)   |
-    +--------+----------+      +-------------------------+
-             ^   │                         ^
-             |   │ 1. "Draft"              |
-      (History)  ▼                         |
-    +-------------------+                  |
-    |   RESPONSE AGENT  | -----------------+
-    |  (The Instructor) |
-    +--------+----------+
-             │
-             │ 2. "Draft + Transcripts"
-             ▼
-    +-------------------+
-    |   CITATION AGENT  |  👉 Inserts [V# - MM:SS] tags
-    |  (The Librarian)  |     (Strict Grounding)
-    +--------+----------+
-             │
-             │ 3. "Grounded Text"
-             ▼
-    +-------------------+
-    |    UI LINKIFIER   |  👉 Resequences to [1], [2]...
-    |   (Visual Layer)  |  👉 Builds "Sources" Sidebar
-    +--------+----------+
-             │
-             ▼
-      Final Output 🖥️
-             │
-             │ (User Reads & Replies)
-             └───────────────────────────┐
-                                         │
-                                         ▼
-                                  (Repeat Loop) 🔄
+    %% Styling
+    classDef actor fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+    classDef agent fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef data fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
+    
+    class User,UI actor;
+    class Coach,DraftAgent,CiteAgent,Linker agent;
+    class KB,History data;
 ```
-</details>
 
 *   **Response Agent**: "Here is how you do X..." (Focuses on pedagogy).
 *   **Citation Agent**: "Here is how you do X [V1 - 02:30]..." (Focuses on truth).
