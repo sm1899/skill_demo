@@ -50,9 +50,9 @@ graph TD
     Coach -->|1. Request Content| DraftAgent
     DraftAgent -->|2. Draft Answer| CiteAgent
     CiteAgent -.->|Verify Claims| KB
-    CiteAgent -->|3. Cited Text [V#]| Linker
+    CiteAgent -->|3. Cited Text V#| Linker
     
-    Linker -->|4. Final Text [1]| UI
+    Linker -->|4. Final Text 1| UI
     UI -->|Response| User
 
     %% Styling
