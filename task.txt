@@ -1,0 +1,39 @@
+AI Generated Instruction Manuals
+
+Problem Statement
+Given the name of a topic, the task is to create a step-by-step complete coursework, which we like to call an instruction manual. You can think of this instruction manual as a complete online course that is provided by popular providers like Udacity, Udemy, Coursera, etc. Each step in this manual can be thought of as an individual video lesson, which tries to teach you one atomic concept of that topic. The steps are chronologically designed in such a way that if a human follows this instruction manual to teach the topic, they should be able to effectively teach the topic to a student.
+
+Assumptions for this problem
+For approaching this problem, you can make the following assumptions:
+The instruction manual should be designed assuming that the student going to learn the topic is a complete beginner
+Design the instruction manual assuming that the instructor is going to follow the manual to the step in the same chronological order to teach the topic. There will be no topic hopping - that is the instructor will never break the chronology of the topics to teach. The flow of teaching would be from instruction 1 through instruction n
+
+
+Recommended Constraints
+Use the content on Youtube to generate the instruction manual
+Generate the instruction manual on three topics: Gamma (AI Presentation Creator), Figma, NotebookLM
+Each instruction manual will have a maximum of 10 steps
+
+
+Output Format
+The output of the generated instruction manual should primarily be text. You are free to choose the format of the output, for example, you can either choose a singular list of instructions, or a list of instructions with embedded list of sub-instructions for each parent instruction, or any other format that you feel would be perfect for the instructor to understand the flow of the coursework.
+
+If you think that any other format (singular modal or a mix of different modals) would be better over the text format, you are free to generate your output in that format, providing a clear concise explanation for your choice.
+
+We would also suggest that you provide a brief write-up explaining the approach that you have taken, justifying your reasoning behind your decisions, wherever applicable, so that we can also evaluate your approach
+
+
+Selection of Tech Stack
+We primarily work with Python for developing our AI components, so we would surely prefer Python, but that does not limit your choice of technology. You are free to choose any programming language, any technology and any model of your choice (any LLM or any conventional ML models) that you prefer and think will do a great job in solving this problem.
+
+Evaluation Criteria
+You will be evaluated on the following criteria (each point has equal importance. The order of these points do not symbolize decrease in importance of the criteria):
+The completeness of your generated manual - whether the student will be able to learn every concept of the topic, from setting up till the finish
+Is your system able to verify each step for its validity - whether a generated step/instruction in your manual is actually correct, or just another hallucination of your system
+Is your instruction manual latest - If we want to create a manual for a tool/software, whether your system is able to capture the evolving functions/features of the tool/software or not
+Whether the correct chronology is maintained and whether there are some critical obvious steps skipped by the system
+The approach taken to solve this problem
+
+
+Queries?
+In case you have any queries regarding this task, or you want any further clarifications regarding any points/assumptions, feel free to reach out and we will try to help you out on that

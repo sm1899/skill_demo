@@ -1,0 +1,7 @@
+langchain
+langchain-google-genai
+google-api-python-client
+youtube-transcript-api
+pydantic
+python-dotenv
+gradio
