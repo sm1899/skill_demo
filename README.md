@@ -2,6 +2,8 @@
 
 An intelligent system that converts unstructured YouTube tutorials into structured, verifiable, and interactive instruction manuals.
 
+> **Explore sample generated outputs**: [Sample Manuals (Gamma, Figma, NotebookLM)](sample_manuals/)
+
 ## 🚀 Key Features
 *   **10-Step Chronological Guides**: Automatically synthesizes "from scratch" tutorials for beginners.
 *   **Interactive AI Coach**: A chat interface that answers questions about the guide.
