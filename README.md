@@ -16,27 +16,33 @@ An intelligent system that converts unstructured YouTube tutorials into structur
 
 The system operates in a linear pipeline to generate the manual, followed by a cyclic loop for the interactive coaching session.
 
-### Video Selection Pipeline
+### Video Selection & Search Agent Pipeline
 
 ```mermaid
 graph LR
-    A[User Topic] --> B[YouTube Search<br/>~20 Candidates]
+    U[User Topic / Question] --> Q[🔎 Search Query Agent<br/>\"What do they really want to learn?\"]
+    Q --> B[YouTube Search<br/>~20 Candidates]
     B --> C[Evaluate Each Video]
     C --> D{Score Transcript}
-    D -->|Quality Check| E[Scoring System]
+    D -->|Quality & Relevance| E[Scoring System]
     E --> F[Sort by Score]
     F --> G[Select Top 3]
     G --> H[Extract Transcripts]
     H --> I[Curriculum Synthesis]
     
-    style A fill:#e1f5fe
-    style E fill:#e8f5e9
-    style G fill:#fff3e0
+    classDef actor fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+    classDef agent fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef data fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
+    
+    class U actor;
+    class Q, C, E agent;
+    class G data;
 ```
 
 ### 1. Data Ingestion (Map Phase)
-*   **Input**: User Topic (e.g., "Gamma AI").
-*   **Search**: Identify ~20 candidate "long-form" tutorials on YouTube (excluding Shorts/promos).
+*   **Input**: User Topic (e.g., "Gamma AI", "hey can you teach me Claude Cowork?").
+*   **Search Query Agent**: A small Gemini-powered agent rewrites the raw question into a focused YouTube tutorial search (e.g., `Claude Cowork tutorial for beginners`).
+*   **Search**: Use the agent query to identify ~20 candidate "long-form" tutorials on YouTube (excluding Shorts/promos).
 *   **Evaluation**: Score each candidate based on:
     *   Transcript quality (length, vocabulary diversity)
     *   Topic relevance (keyword frequency)

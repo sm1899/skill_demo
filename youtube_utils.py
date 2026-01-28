@@ -3,18 +3,86 @@ import subprocess
 import glob
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
+def generate_search_query_with_agent(raw_topic: str) -> str:
+    """
+    Lightweight search-query agent using Gemini to transform a natural-language
+    user request into a focused YouTube tutorial query.
+
+    Examples:
+      - "hey can you teach me how to use claude cowork?" -> "claude cowork tutorial for beginners"
+      - "I want to learn Gamma AI from scratch" -> "gamma ai beginner tutorial"
+    """
+    # Fallback: if no topic, return empty string
+    if not raw_topic or not raw_topic.strip():
+        return ""
+
+    try:
+        system_prompt = (
+            "You are a search query assistant for YouTube.\n"
+            "Your job is to convert a casual user question into a short, focused search query "
+            "that will find high-quality tutorial videos for learning that skill from scratch.\n\n"
+            "Rules:\n"
+            "- Keep it under 8 words.\n"
+            "- Remove filler like 'hey', 'can you', 'please', 'teach me', 'how do I', etc.\n"
+            "- Include the key product / tool / concept name.\n"
+            "- Add words like 'tutorial', 'guide', or 'for beginners' if helpful.\n"
+            "- Do NOT answer the question. Only return the search query.\n"
+            "- Output only the search query text, no quotes, no extra explanation."
+        )
+
+        from langchain_core.messages import SystemMessage, HumanMessage
+
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-3-flash-preview",
+            google_api_key=os.getenv("GOOGLE_API_KEY"),
+            safety_settings={
+                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+                "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+                "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+            },
+        )
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"User question: {raw_topic}"),
+        ]
+        response = llm.invoke(messages)
+        # Handle both string and list-style outputs
+        content = response.content
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if isinstance(part, dict) and "text" in part:
+                    parts.append(part["text"])
+                elif isinstance(part, str):
+                    parts.append(part)
+            content = "".join(parts)
+
+        query = str(content).strip()
+        # Simple safety fallback: if the model returns something empty, reuse the raw topic
+        if not query:
+            return raw_topic.strip()
+        return query
+    except Exception as e:
+        print(f"[Terminal Log] Search Agent Error, falling back to raw topic: {e}")
+        return raw_topic.strip()
+
 def search_youtube_videos(query, max_results=3, candidate_pool_size=20):
     """Searches for tutorial videos on YouTube, returning a larger candidate pool for evaluation."""
+    search_query = generate_search_query_with_agent(query)
     print(f"[Terminal Log] Searching YouTube for: {query}...")
+    print(f"[Terminal Log] Search Agent query: {search_query}")
     youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
     
     request = youtube.search().list(
-        q=f"'{query}' tutorial beginner guide -zapier -automation-only",
+        q=f"{search_query}",
         part="snippet",
         maxResults=candidate_pool_size,
         type="video",
