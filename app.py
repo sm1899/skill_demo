@@ -16,21 +16,42 @@ def initialize_coach(topic: str, progress=gr.Progress()):
     print(f"[Terminal Log] --- Starting Initialization for Topic: {topic} ---")
     try:
         progress(0, desc="🔍 Searching YouTube...")
-        videos = search_youtube_videos(topic)
-        if not videos:
+        candidate_videos = search_youtube_videos(topic, max_results=3, candidate_pool_size=20)
+        if not candidate_videos:
             return None, "No videos found.", gr.update(visible=False), [], "", "No sources.", "❌ No videos found for this topic."
         
-        progress(0.2, desc="📽️ Extracting Transcripts...")
-        video_data = []
-        for i, v in enumerate(videos):
-            status = f"📄 Fetching: {v['title'][:30]}..."
-            progress(0.2 + (i / len(videos)) * 0.3, desc=status)
-            t = get_transcript(v['video_id'], topic=topic)
-            if t:
-                video_data.append({"title": v['title'], "transcript": t, "video_id": v['video_id']})
+        progress(0.1, desc=f"📽️ Evaluating {len(candidate_videos)} candidate videos...")
+        scored_videos = []
+        total_candidates = len(candidate_videos)
         
-        if not video_data:
+        for i, v in enumerate(candidate_videos):
+            status = f"📄 Evaluating: {v['title'][:40]}... ({i+1}/{total_candidates})"
+            progress(0.1 + (i / total_candidates) * 0.5, desc=status)
+            
+            transcript, score = get_transcript(v['video_id'], topic=topic, view_count=v.get('view_count', 0), position=i)
+            if transcript and score > 0:
+                scored_videos.append({
+                    "title": v['title'],
+                    "transcript": transcript,
+                    "video_id": v['video_id'],
+                    "score": score
+                })
+                print(f"[Terminal Log] ✓ {v['title'][:50]}: Score {score:.1f}")
+        
+        if not scored_videos:
             return None, "No valid transcripts.", gr.update(visible=False), [], "", "No data.", "❌ No valid tutorials found (failed validation)."
+        
+        # Sort by score (highest first) and take top 3
+        scored_videos.sort(key=lambda x: x['score'], reverse=True)
+        video_data = scored_videos[:3]
+        
+        print(f"[Terminal Log] Selected top {len(video_data)} videos:")
+        for v in video_data:
+            print(f"[Terminal Log]   • {v['title'][:60]} (Score: {v['score']:.1f})")
+        
+        # Remove score from final data structure
+        for v in video_data:
+            v.pop('score', None)
             
         progress(0.6, desc="🧠 Synthesizing 10-Step Guide...")
         curriculum = generate_coachable_curriculum(topic, video_data)
@@ -130,7 +151,7 @@ def respond(message: str, history: List[dict], coach: AICoach):
         
     return history, "", combined_sources
 
-with gr.Blocks(theme=gr.themes.Soft(), title="AI Coach") as demo:
+with gr.Blocks(title="AI Coach") as demo:
     coach_state = gr.State(None)
     
     with gr.Row():
@@ -151,7 +172,7 @@ with gr.Blocks(theme=gr.themes.Soft(), title="AI Coach") as demo:
 
     with gr.Row(visible=False) as main_area:
         with gr.Column(scale=2):
-            chatbot = gr.Chatbot(label="Chat", height=600, type="messages")
+            chatbot = gr.Chatbot(label="Chat", height=600)
             with gr.Row():
                 msg_input = gr.Textbox(label="Message", scale=4)
                 send_btn = gr.Button("Send", variant="primary", scale=1)
@@ -175,4 +196,4 @@ with gr.Blocks(theme=gr.themes.Soft(), title="AI Coach") as demo:
     clear_btn.click(lambda: [], None, chatbot, queue=False)
 
 if __name__ == "__main__":
-    demo.queue().launch(share=False)
+    demo.queue().launch(share=True, theme=gr.themes.Soft())

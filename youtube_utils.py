@@ -8,21 +8,15 @@ load_dotenv()
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
-def search_youtube_videos(query, max_results=3):
-    """Searches for tutorial videos on YouTube, excluding Shorts."""
+def search_youtube_videos(query, max_results=3, candidate_pool_size=20):
+    """Searches for tutorial videos on YouTube, returning a larger candidate pool for evaluation."""
     print(f"[Terminal Log] Searching YouTube for: {query}...")
     youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
     
-    # We add videoDuration='medium' or 'long' to avoid Shorts (< 4 mins or > 20 mins)
-    # Actually 'any' is default. Let's use videoDuration='medium' or 'long'?
-    # Or just 'short' is < 4 mins. Shorts are < 1 min.
-    # To be safe, we'll fetch more and filter by duration if part='contentDetails' is used.
-    # But for now, let's use videoDuration='medium' (4-20 mins) which is ideal for tutorials.
-    
     request = youtube.search().list(
-        q=f"'{query}' tutorial beginner guide -zapier -automation-only", # Strict quotes and negative matches
+        q=f"'{query}' tutorial beginner guide -zapier -automation-only",
         part="snippet",
-        maxResults=max_results + 7, # Fetch even more to filter better
+        maxResults=candidate_pool_size,
         type="video",
         order="viewCount",
         videoDuration="medium", 
@@ -35,23 +29,25 @@ def search_youtube_videos(query, max_results=3):
     for item in response.get("items", []):
         title = item["snippet"]["title"].lower()
         
-        # Stricter relevance check on title
+        # Basic relevance check on title
         if not any(word in title for word in topic_words):
             print(f"[Terminal Log] Skipping irrelevant result: {item['snippet']['title']}")
             continue
             
         if "short" in title and "tutorial" not in title:
             continue
+        
+        # Note: View count not available in search results, will use 0
+        # Videos are already ordered by viewCount, so higher views come first
             
         videos.append({
             "video_id": item["id"]["videoId"],
             "title": item["snippet"]["title"],
-            "published_at": item["snippet"]["publishedAt"]
+            "published_at": item["snippet"]["publishedAt"],
+            "view_count": 0  # Not available from search API, but videos are sorted by viewCount
         })
-        if len(videos) >= max_results:
-            break
             
-    print(f"[Terminal Log] Found {len(videos)} suitable tutorial videos.")
+    print(f"[Terminal Log] Found {len(videos)} candidate videos for evaluation.")
     return videos
 
 def validate_transcript(content: str, topic: str = None) -> bool:
@@ -80,6 +76,45 @@ def validate_transcript(content: str, topic: str = None) -> bool:
              return False
              
     return True
+
+def score_transcript(content: str, topic: str = None, view_count: int = 0, position: int = 0) -> float:
+    """Scores a transcript based on quality, relevance, and video popularity. Returns 0 if invalid."""
+    if not content or len(content) < 500:
+        return 0.0
+    
+    content_lower = content.lower()
+    score = 0.0
+    
+    # Base score from transcript length (longer = better, up to a point)
+    length_score = min(len(content) / 5000.0, 1.0) * 30  # Max 30 points
+    score += length_score
+    
+    # Topic relevance score (most important)
+    if topic:
+        topic_keywords = topic.lower().split()
+        keyword_matches = sum(content_lower.count(k) for k in topic_keywords)
+        relevance_score = min(keyword_matches / 20.0, 1.0) * 40  # Max 40 points
+        score += relevance_score
+    
+    # Quality score (fewer low-content indicators = better)
+    low_content_indicators = ["[Music]", "[Laughter]", "[Applause]", "inaudible", "foreign"]
+    tag_count = sum(content_lower.count(tag.lower()) for tag in low_content_indicators)
+    tag_ratio = tag_count / max(len(content_lower) / 50, 1)
+    quality_score = max(0, (1.0 - min(tag_ratio, 1.0))) * 20  # Max 20 points
+    score += quality_score
+    
+    # Vocabulary diversity score
+    words = set(content_lower.split())
+    vocab_score = min(len(words) / 200.0, 1.0) * 10  # Max 10 points
+    score += vocab_score
+    
+    # Position bonus (earlier in search results = more popular, max 10 points)
+    # First video gets 10, second gets 8, third gets 6, etc.
+    if position < 10:
+        position_score = max(0, 10 - position * 0.5)
+        score += position_score
+    
+    return score
 
 def vtt_to_clean_text(vtt_content: str) -> str:
     """Converts raw VTT content into a clean, LLM-friendly timestamped transcript."""
@@ -115,22 +150,22 @@ def vtt_to_clean_text(vtt_content: str) -> str:
                 
     return "\n".join(clean_lines)
 
-def get_transcript(video_id, topic: str = None):
-    """Retrieves, cleans, and validates the transcript using yt-dlp."""
+def get_transcript(video_id, topic: str = None, view_count: int = 0, position: int = 0):
+    """Retrieves, cleans, and validates the transcript using yt-dlp. Returns (transcript, score) or (None, 0)."""
     output_filename = f"temp_{video_id}"
     url = f"https://www.youtube.com/watch?v={video_id}"
     
     try:
         # Run yt-dlp to get auto-generated subtitles
-        subprocess.run([
+        result = subprocess.run([
             "yt-dlp", "--write-auto-subs", "--sub-lang", "en", 
             "--skip-download", "--output", output_filename, url
-        ], check=True, capture_output=True)
+        ], check=True, capture_output=True, text=True)
         
         files = glob.glob(f"{output_filename}*")
         if not files:
             print(f"[Terminal Log] No subtitle files for {video_id}")
-            return None
+            return None, 0.0
         
         transcript_file = files[0]
         with open(transcript_file, "r", encoding="utf-8") as f:
@@ -142,13 +177,22 @@ def get_transcript(video_id, topic: str = None):
             
         # Transform VTT to clean timestamped text
         content = vtt_to_clean_text(raw_content)
-            
-        if validate_transcript(content, topic):
-            return content
+        
+        # Score the transcript
+        score = score_transcript(content, topic, view_count, position)
+        
+        if score > 0:  # Valid transcript
+            return content, score
         else:
             print(f"[Terminal Log] Transcript for {video_id} failed validation (low quality or irrelevant).")
-            return None
+            return None, 0.0
             
+    except subprocess.CalledProcessError as e:
+        # With text=True, stderr is already a string, not bytes
+        error_msg = e.stderr if e.stderr else (e.stdout if e.stdout else str(e))
+        error_display = error_msg[:200] if error_msg else str(e)
+        print(f"[Terminal Log] Error retrieving transcript via yt-dlp for {video_id}: {error_display}")
+        return None, 0.0
     except Exception as e:
         print(f"[Terminal Log] Error retrieving transcript via yt-dlp for {video_id}: {e}")
-        return None
+        return None, 0.0
