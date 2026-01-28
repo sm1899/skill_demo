@@ -16,11 +16,34 @@ An intelligent system that converts unstructured YouTube tutorials into structur
 
 The system operates in a linear pipeline to generate the manual, followed by a cyclic loop for the interactive coaching session.
 
+### Video Selection Pipeline
+
+```mermaid
+graph LR
+    A[User Topic] --> B[YouTube Search<br/>~20 Candidates]
+    B --> C[Evaluate Each Video]
+    C --> D{Score Transcript}
+    D -->|Quality Check| E[Scoring System]
+    E --> F[Sort by Score]
+    F --> G[Select Top 3]
+    G --> H[Extract Transcripts]
+    H --> I[Curriculum Synthesis]
+    
+    style A fill:#e1f5fe
+    style E fill:#e8f5e9
+    style G fill:#fff3e0
+```
+
 ### 1. Data Ingestion (Map Phase)
 *   **Input**: User Topic (e.g., "Gamma AI").
-*   **Search**: Identify top 3-5 "long-form" tutorials on YouTube (excluding Shorts/promos).
+*   **Search**: Identify ~20 candidate "long-form" tutorials on YouTube (excluding Shorts/promos).
+*   **Evaluation**: Score each candidate based on:
+    *   Transcript quality (length, vocabulary diversity)
+    *   Topic relevance (keyword frequency)
+    *   Content quality (fewer low-content indicators)
+    *   Video popularity (search position)
+*   **Selection**: Select top 3 highest-scoring videos for best coverage.
 *   **Extraction**: Download valid transcripts (VTT) and clean them into timestamped chunks.
-*   **Verify**: Filter out low-quality or irrelevant transcripts.
 
 ### 2. Curriculum Synthesis (Reduce Phase)
 *   **Milestone Extraction**: An LLM agent extracts key "atomic concepts" from each video.
