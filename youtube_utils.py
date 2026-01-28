@@ -86,7 +86,7 @@ def search_youtube_videos(query, max_results=3, candidate_pool_size=20):
         part="snippet",
         maxResults=candidate_pool_size,
         type="video",
-        order="viewCount",
+        order="relevance",  # prioritize relevance instead of pure popularity
         videoDuration="medium", 
         publishedAfter="2024-01-01T00:00:00Z"
     )
