@@ -20,7 +20,7 @@ The system operates in a linear pipeline to generate the manual, followed by a c
 
 ```mermaid
 graph LR
-    U[User Topic / Question] --> Q[🔎 Search Query Agent<br/>\"What do they really want to learn?\"]
+    U[User Topic / Question] --> Q[🔎 Search Query Agent<br/>What do they really want to learn?]
     Q --> B[YouTube Search<br/>~20 Candidates]
     B --> C[Evaluate Each Video]
     C --> D{Score Transcript}
