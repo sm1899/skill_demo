@@ -29,14 +29,6 @@ graph LR
     F --> G[Select Top 3]
     G --> H[Extract Transcripts]
     H --> I[Curriculum Synthesis]
-    
-    classDef actor fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
-    classDef agent fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef data fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
-    
-    class U actor;
-    class Q, C, E agent;
-    class G data;
 ```
 
 ### 1. Data Ingestion (Map Phase)
